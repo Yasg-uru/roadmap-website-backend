@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema, model } from 'mongoose';
 
 export interface IRoadmapNode extends Document {
+  _id:mongoose.Types.ObjectId;
   roadmap: mongoose.Types.ObjectId;
   title: string;
   description?: string;

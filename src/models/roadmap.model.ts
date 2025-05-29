@@ -201,6 +201,6 @@ roadmapSchema.pre(/^find/, function (next) {
   next();
 });
 
-// Export
+
 const Roadmap = model<IRoadmap>('Roadmap', roadmapSchema);
 export default Roadmap;

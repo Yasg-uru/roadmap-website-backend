@@ -118,3 +118,65 @@ export const createRoadmap = async (req: Request, res: Response, next:NextFuncti
     res.status(500).json({ message: "Failed to create roadmap", error: err });
   }
 };
+
+
+export const getRoadmapDetails = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idOrSlug } = req.params;
+
+    // Match either ID or slug
+    const roadmap = await Roadmap.findOne(
+      mongoose.Types.ObjectId.isValid(idOrSlug)
+        ? { _id: idOrSlug }
+        : { slug: idOrSlug }
+    )
+      .populate('contributor', 'username avatar')
+      .populate({
+        path: 'reviews',
+        populate: { path: 'user', select: 'username avatar' }
+      });
+
+    if (!roadmap) return res.status(404).json({ message: 'Roadmap not found' });
+
+    // Fetch roadmap nodes
+    const nodes = await RoadmapNode.find({ roadmap: roadmap._id })
+      .populate({
+        path: 'resources',
+        match: { isApproved: true },
+        select: '-upvotes -downvotes',
+      })
+      .populate('dependencies prerequisites', 'title _id')
+      .sort({ depth: 1, position: 1 });
+
+    // Optional: you can build a tree or flat list
+    const buildTree = () => {
+      const nodeMap: any = {};
+      const roots: any[] = [];
+
+      nodes.forEach((node) => (nodeMap[node._id.toString()] = { ...node.toObject(), children: [] }));
+      nodes.forEach((node) => {
+        node.dependencies?.forEach((dep: any) => {
+          const parent = nodeMap[dep._id.toString()];
+          if (parent) parent.children.push(nodeMap[node._id.toString()]);
+        });
+      });
+
+      nodes.forEach((node) => {
+        if (!node.dependencies?.length) {
+          roots.push(nodeMap[node._id.toString()]);
+        }
+      });
+
+      return roots;
+    };
+
+    const response = {
+      roadmap,
+      nodes: buildTree(),
+    };
+
+    return res.status(200).json(response);
+  } catch (err) {
+    next(err);
+  }
+};
