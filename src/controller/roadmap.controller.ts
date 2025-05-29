@@ -2,6 +2,9 @@ import { NextFunction, Request, Response } from "express";
 import Roadmap from "../models/roadmap.model";
 import mongoose from "mongoose";
 import RoadmapNode from "../models/roadmap_node.model";
+import { reqwithuser } from "../middleware/auth.middleware";
+import Errorhandler from "../util/Errorhandler.util";
+import Review from "../models/review.model";
 
 export const getRoadmapsPaginated = async (
   req: Request,
@@ -178,5 +181,113 @@ export const getRoadmapDetails = async (req: Request, res: Response, next: NextF
     return res.status(200).json(response);
   } catch (err) {
     next(err);
+  }
+};
+
+export const updateRoadmapWithNodes = async (req: reqwithuser, res: Response, next: NextFunction) => {
+  try {
+    const roadmapId = req.params.id;
+    const { roadmapUpdates, nodes } = req.body;
+
+  
+
+    const roadmap = await Roadmap.findById(roadmapId);
+    if (!roadmap) return next(new Errorhandler(404 , "Roadmap not found"));
+
+
+    // Basic update
+    Object.assign(roadmap, roadmapUpdates);
+    roadmap.version = (roadmap.version ?? 0) + 1;
+    roadmap.lastUpdated = new Date();
+    roadmap.updatedBy = (req.user as { _id: mongoose.Types.ObjectId })?._id;
+    await roadmap.save();
+
+    // Bulk update nodes
+    if (Array.isArray(nodes)) {
+      const bulkOps = nodes.map((node) => ({
+        updateOne: {
+          filter: { _id: node._id, roadmap: roadmapId },
+          update: { $set: { ...node, updatedBy: req.user?._id, updatedAt: new Date() } },
+        },
+      }));
+      await RoadmapNode.bulkWrite(bulkOps);
+    }
+
+    res.status(200).json({ success: true, message: 'Roadmap and nodes updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+export const getRoadmapReviews = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { roadmapId } = req.params;
+    
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const sort = typeof req.query.sort === 'string' ? req.query.sort : '-createdAt';
+    const minRating = parseInt(req.query.minRating as string) || 1;
+    const isVerified = req.query.isVerified === 'true' ? true : undefined;
+
+    // Filtering conditions
+    const filter: any = {
+      roadmap: roadmapId,
+      rating: { $gte: minRating },
+    };
+
+    if (isVerified !== undefined) filter.isVerified = isVerified;
+
+    // Query & paginate reviews
+    const reviewsPromise = Review.find(filter)
+      .sort(sort as string)
+      .skip(skip)
+      .limit(limit)
+      .populate('user', 'username avatar');
+
+    // Count for pagination
+    const countPromise = Review.countDocuments(filter);
+
+    // Aggregated rating breakdown
+    const ratingStatsPromise = Review.aggregate([
+      { $match: { roadmap: new mongoose.Types.ObjectId(roadmapId) } },
+      {
+        $group: {
+          _id: '$rating',
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { _id: -1 },
+      },
+    ]);
+
+    const [reviews, total, ratingStats] = await Promise.all([
+      reviewsPromise,
+      countPromise,
+      ratingStatsPromise,
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    const breakdown: Record<number, number> = {
+      1: 0, 2: 0, 3: 0, 4: 0, 5: 0,
+    };
+
+    ratingStats.forEach(stat => {
+      breakdown[stat._id] = stat.count;
+    });
+
+    return res.status(200).json({
+      success: true,
+      total,
+      page,
+      totalPages,
+      breakdown,
+      reviews,
+    });
+  } catch (error) {
+    next(error);
   }
 };
