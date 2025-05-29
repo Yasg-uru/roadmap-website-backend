@@ -195,3 +195,5 @@ userProgressSchema.pre(
     next();
   }
 );
+const userProgressModel = model<IUserProgress>("UserProgress", userProgressSchema);
+export default userProgressModel
