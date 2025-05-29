@@ -9,7 +9,7 @@ export interface IReview extends Document {
   pros?: string[];
   cons?: string[];
   isVerified: boolean;
-  helpfulCount: number;
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,10 +61,7 @@ const reviewSchema = new Schema<IReview, ReviewModel>(
       type: Boolean,
       default: false
     },
-    helpfulCount: {
-      type: Number,
-      default: 0
-    },
+    
     createdAt: {
       type: Date,
       default: Date.now
