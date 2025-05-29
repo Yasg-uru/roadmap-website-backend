@@ -27,7 +27,7 @@ export const createReview = async (req: reqwithuser, res: Response, next: NextFu
       return res.status(400).json({ message: 'Rating must be between 1 and 5' });
     }
 
-    // 3. (Optional) Check roadmap existence
+    
     const roadmapExists = await Roadmap.exists({ _id: roadmapId });
     if (!roadmapExists) {
       return res.status(404).json({ message: 'Roadmap not found' });

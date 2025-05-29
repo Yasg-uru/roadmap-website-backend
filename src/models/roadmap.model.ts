@@ -181,15 +181,13 @@ roadmapSchema.virtual('reviews', {
   justOne: false,
 });
 
-// Middleware
 roadmapSchema.pre('save', function (next) {
   this.slug = slugify(this.title, { lower: true });
-  next();
-});
 
-roadmapSchema.pre('save', function (next) {
-  if (!this.isModified('isPublished') || !this.isPublished) return next();
-  this.publishedAt = new Date();
+  if (this.isModified('isPublished') && this.isPublished) {
+    this.publishedAt = new Date();
+  }
+
   next();
 });
 

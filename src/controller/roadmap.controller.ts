@@ -5,7 +5,7 @@ import RoadmapNode from "../models/roadmap_node.model";
 import { reqwithuser } from "../middleware/auth.middleware";
 import Errorhandler from "../util/Errorhandler.util";
 import Review from "../models/review.model";
-
+import "../models/resource.model"
 export const getRoadmapsPaginated = async (
   req: Request,
   res: Response,
@@ -45,7 +45,11 @@ export const getRoadmapsPaginated = async (
     next(error);
   }
 };
-export const createRoadmap = async (req: Request, res: Response, next:NextFunction) => {
+export const createRoadmap = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -122,8 +126,11 @@ export const createRoadmap = async (req: Request, res: Response, next:NextFuncti
   }
 };
 
-
-export const getRoadmapDetails = async (req: Request, res: Response, next: NextFunction) => {
+export const getRoadmapDetails = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { idOrSlug } = req.params;
 
@@ -133,22 +140,22 @@ export const getRoadmapDetails = async (req: Request, res: Response, next: NextF
         ? { _id: idOrSlug }
         : { slug: idOrSlug }
     )
-      .populate('contributor', 'username avatar')
+      .populate("contributor", "username avatar")
       .populate({
-        path: 'reviews',
-        populate: { path: 'user', select: 'username avatar' }
+        path: "reviews",
+        populate: { path: "user", select: "username avatar" },
       });
 
-    if (!roadmap) return res.status(404).json({ message: 'Roadmap not found' });
+    if (!roadmap) return res.status(404).json({ message: "Roadmap not found" });
 
     // Fetch roadmap nodes
     const nodes = await RoadmapNode.find({ roadmap: roadmap._id })
       .populate({
-        path: 'resources',
+        path: "resources",
         match: { isApproved: true },
-        select: '-upvotes -downvotes',
+        select: "-upvotes -downvotes",
       })
-      .populate('dependencies prerequisites', 'title _id')
+      .populate("dependencies prerequisites", "title _id")
       .sort({ depth: 1, position: 1 });
 
     // Optional: you can build a tree or flat list
@@ -156,7 +163,10 @@ export const getRoadmapDetails = async (req: Request, res: Response, next: NextF
       const nodeMap: any = {};
       const roots: any[] = [];
 
-      nodes.forEach((node) => (nodeMap[node._id.toString()] = { ...node.toObject(), children: [] }));
+      nodes.forEach(
+        (node) =>
+          (nodeMap[node._id.toString()] = { ...node.toObject(), children: [] })
+      );
       nodes.forEach((node) => {
         node.dependencies?.forEach((dep: any) => {
           const parent = nodeMap[dep._id.toString()];
@@ -184,16 +194,17 @@ export const getRoadmapDetails = async (req: Request, res: Response, next: NextF
   }
 };
 
-export const updateRoadmapWithNodes = async (req: reqwithuser, res: Response, next: NextFunction) => {
+export const updateRoadmapWithNodes = async (
+  req: reqwithuser,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const roadmapId = req.params.id;
+    const {roadmapId} = req.params;
     const { roadmapUpdates, nodes } = req.body;
 
-  
-
     const roadmap = await Roadmap.findById(roadmapId);
-    if (!roadmap) return next(new Errorhandler(404 , "Roadmap not found"));
-
+    if (!roadmap) return next(new Errorhandler(404, "Roadmap not found"));
 
     // Basic update
     Object.assign(roadmap, roadmapUpdates);
@@ -207,29 +218,38 @@ export const updateRoadmapWithNodes = async (req: reqwithuser, res: Response, ne
       const bulkOps = nodes.map((node) => ({
         updateOne: {
           filter: { _id: node._id, roadmap: roadmapId },
-          update: { $set: { ...node, updatedBy: req.user?._id, updatedAt: new Date() } },
+          update: {
+            $set: { ...node, updatedBy: req.user?._id, updatedAt: new Date() },
+          },
         },
       }));
       await RoadmapNode.bulkWrite(bulkOps);
     }
 
-    res.status(200).json({ success: true, message: 'Roadmap and nodes updated successfully' });
+    res.status(200).json({
+      success: true,
+      message: "Roadmap and nodes updated successfully",
+    });
   } catch (error) {
     next(error);
   }
 };
-export const getRoadmapReviews = async (req: Request, res: Response, next: NextFunction) => {
+export const getRoadmapReviews = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { roadmapId } = req.params;
-    
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    const sort = typeof req.query.sort === 'string' ? req.query.sort : '-createdAt';
+    const sort =
+      typeof req.query.sort === "string" ? req.query.sort : "-createdAt";
     const minRating = parseInt(req.query.minRating as string) || 1;
-    const isVerified = req.query.isVerified === 'true' ? true : undefined;
+    const isVerified = req.query.isVerified === "true" ? true : undefined;
 
     // Filtering conditions
     const filter: any = {
@@ -244,7 +264,7 @@ export const getRoadmapReviews = async (req: Request, res: Response, next: NextF
       .sort(sort as string)
       .skip(skip)
       .limit(limit)
-      .populate('user', 'username avatar');
+      .populate("user", "username avatar");
 
     // Count for pagination
     const countPromise = Review.countDocuments(filter);
@@ -254,7 +274,7 @@ export const getRoadmapReviews = async (req: Request, res: Response, next: NextF
       { $match: { roadmap: new mongoose.Types.ObjectId(roadmapId) } },
       {
         $group: {
-          _id: '$rating',
+          _id: "$rating",
           count: { $sum: 1 },
         },
       },
@@ -272,10 +292,14 @@ export const getRoadmapReviews = async (req: Request, res: Response, next: NextF
     const totalPages = Math.ceil(total / limit);
 
     const breakdown: Record<number, number> = {
-      1: 0, 2: 0, 3: 0, 4: 0, 5: 0,
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
     };
 
-    ratingStats.forEach(stat => {
+    ratingStats.forEach((stat) => {
       breakdown[stat._id] = stat.count;
     });
 
