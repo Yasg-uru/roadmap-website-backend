@@ -3,6 +3,8 @@ import {
 
   forgotPassword,
 
+  getMyProfile,
+
   Login,
   Logout,
   registerUser,
@@ -19,5 +21,6 @@ userRouter.post("/sign-in", Login); //marked
 userRouter.post("/logout", Logout); //marked
 userRouter.post("/forgot-password", forgotPassword); //marked
 userRouter.put("/reset-password/:token", Resetpassword); //marked
+userRouter.get('/me', isAuthenticated, getMyProfile);
 
 export default userRouter;

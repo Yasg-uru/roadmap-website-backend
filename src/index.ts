@@ -13,10 +13,12 @@ import userProgressRoute from "./route/user_progress.route";
 dotenv.config();
 ConnectDatabase();
 
-const app = express();
-const server = http.createServer(app); // <- This replaces app.listen()
+const userSocketMap = new Map<string, string>();
 
-// Setup Socket.IO
+const app = express();
+const server = http.createServer(app); 
+
+
 export const io = new SocketIOServer(server, {
   cors: {
     origin: ["http://localhost:5173"],
@@ -24,22 +26,25 @@ export const io = new SocketIOServer(server, {
   },
 });
 
-// Socket.IO connection handler
+
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
 
-  // Example event
-  socket.on("joinRoom", (roomId) => {
-    socket.join(roomId);
-    console.log(`Socket ${socket.id} joined room ${roomId}`);
+   socket.on("registerUser", (userId: string) => {
+    if (userId) {
+      userSocketMap.set(userId, socket.id);
+      socket.join(`user_${userId}`);
+      console.log(`User ${userId} registered with socket ${socket.id}`);
+    }
   });
+
 
   socket.on("disconnect", () => {
     console.log("Socket disconnected:", socket.id);
   });
 });
 
-// Express middlewares
+
 app.use(
   cors({
     origin: ["http://localhost:5173"],
@@ -49,16 +54,16 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 
-// Routes
+
 app.use("/user", userRouter);
 app.use("/roadmap", RoadmapRouter);
 app.use('/user-progress', userProgressRoute
-  
+
 )
-// Error handler
+
 app.use(ErrorhandlerMiddleware);
 
-// Start server
+
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
   console.log("Server is running on port:", PORT);

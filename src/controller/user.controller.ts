@@ -10,7 +10,26 @@ import Errorhandler from "../util/Errorhandler.util";
 import sendtoken from "../util/sendtoken";
 import { reqwithuser } from "../middleware/auth.middleware";
 import { Schema, ObjectId } from "mongoose";
+export const getMyProfile = catchAsync(
+  async (req: reqwithuser, res: Response, next: NextFunction) => {
+    const userId = req.user?._id;
 
+    if (!userId) {
+      return next(new Errorhandler(401, "Not authorized"));
+    }
+
+    const user = await usermodel.findById(userId).select("-password -verifyCode -verifyCodeExpiry");
+
+    if (!user) {
+      return next(new Errorhandler(404, "User not found"));
+    }
+
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  }
+);
 
 export const registerUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -99,6 +118,7 @@ export const registerUser = catchAsync(
     }
   }
 );
+
 export const verifyuser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
