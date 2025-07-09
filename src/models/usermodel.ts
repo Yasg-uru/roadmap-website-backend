@@ -5,7 +5,8 @@ import jwt from "jsonwebtoken";
 import { JwtDecodedUser } from "../types/jwtDecodedUser";
 import crypto from "crypto";
 
-export interface User extends Document {
+export interface User extends Document { 
+  _id: mongoose.Types.ObjectId; 
   username: string;
   email: string;
   password: string;

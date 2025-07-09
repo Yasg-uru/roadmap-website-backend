@@ -5,7 +5,7 @@ import RoadmapNode from "../models/roadmap_node.model";
 import { reqwithuser } from "../middleware/auth.middleware";
 import Errorhandler from "../util/Errorhandler.util";
 import Review from "../models/review.model";
-import "../models/resource.model"
+import "../models/resource.model";
 export const getRoadmapsPaginated = async (
   req: Request,
   res: Response,
@@ -200,7 +200,7 @@ export const updateRoadmapWithNodes = async (
   next: NextFunction
 ) => {
   try {
-    const {roadmapId} = req.params;
+    const { roadmapId } = req.params;
     const { roadmapUpdates, nodes } = req.body;
 
     const roadmap = await Roadmap.findById(roadmapId);
@@ -315,3 +315,103 @@ export const getRoadmapReviews = async (
     next(error);
   }
 };
+
+
+
+// DELETE /roadmaps/:roadmapId
+export const deleteRoadmap = async (
+  req: reqwithuser,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { roadmapId } = req.params;
+
+    const roadmap = await Roadmap.findById(roadmapId);
+    if (!roadmap) return next(new Errorhandler(404, "Roadmap not found"));
+
+    // Optionally: check ownership or admin role
+    if (
+     !req.user ||( roadmap.contributor?.toString() !== req.user._id.toString() && req.user.Role !== "admin"))
+     {
+      return next(new Errorhandler(403, "Unauthorized to delete roadmap"));
+    }
+
+    await RoadmapNode.deleteMany({ roadmap: roadmapId });
+    await roadmap.deleteOne();
+
+    res.status(200).json({ success: true, message: "Roadmap deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+
+// PATCH /roadmaps/:roadmapId
+export const updateRoadmap = async (
+  req: reqwithuser,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { roadmapId } = req.params;
+    const updates = req.body;
+
+    const roadmap = await Roadmap.findById(roadmapId);
+    if (!roadmap) return next(new Errorhandler(404, "Roadmap not found"));
+
+    if (
+      !req.user ||(roadmap.contributor?.toString() !== req.user._id.toString() && req.user.Role !== "admin")
+    ) {
+      return next(new Errorhandler(403, "Unauthorized to update roadmap"));
+    }
+
+    Object.assign(roadmap, updates);
+    roadmap.version = (roadmap.version ?? 0) + 1;
+    roadmap.lastUpdated = new Date();
+    roadmap.updatedBy = req.user._id;
+
+    await roadmap.save();
+
+    res.status(200).json({ success: true, message: "Roadmap updated", roadmap });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+
+// PATCH /roadmaps/:id/publish
+
+export const togglePublishRoadmap = async(
+  req: reqwithuser, 
+  res: Response, 
+  next: NextFunction 
+)  => {
+    try{
+       const{id} = req.params; 
+       const {isPublished} = req.body; 
+
+       const roadmap = await Roadmap.findById(id); 
+       if(!roadmap) return next(new Errorhandler(404, "Roadmap not found")); 
+
+       if(!req.user || req.user.Role !== "admin"){
+          return next(new Errorhandler (403, "only main can publish/unpublish roadmaps")); 
+       }
+
+       roadmap.isPublished = isPublished; 
+       roadmap.publishedAt = isPublished ? new Date() : undefined; 
+       await roadmap.save();
+
+
+       res.status(200).json({
+          success: true, 
+          message: `Roadmap ${isPublished ? "published" : "unpublished"} successfully`, 
+
+       }); 
+    } catch(err){
+       next(err); 
+    }
+}; 
