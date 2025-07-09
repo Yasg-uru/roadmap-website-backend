@@ -8,7 +8,7 @@ import cookieParser from "cookie-parser";
 import userRouter from "./route/user.route";
 import RoadmapRouter from "./route/roadmap.route";
 import { ErrorhandlerMiddleware } from "./util/Errorhandler.util";
-import userProgressRoute from "./route/user_progress.route";
+
 
 dotenv.config();
 ConnectDatabase();
@@ -57,9 +57,7 @@ app.use(express.json());
 
 app.use("/user", userRouter);
 app.use("/roadmap", RoadmapRouter);
-app.use('/user-progress', userProgressRoute
 
-)
 
 app.use(ErrorhandlerMiddleware);
 
