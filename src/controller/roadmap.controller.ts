@@ -6,6 +6,7 @@ import { reqwithuser } from "../middleware/auth.middleware";
 import Errorhandler from "../util/Errorhandler.util";
 import Review from "../models/review.model";
 import "../models/resource.model";
+import { error } from "console";
 export const getRoadmapsPaginated = async (
   req: Request,
   res: Response,
@@ -147,7 +148,7 @@ export const getRoadmapDetails = async (
       });
 
     if (!roadmap) return res.status(404).json({ message: "Roadmap not found" });
-
+          console.error(error);
     // Fetch roadmap nodes
     const nodes = await RoadmapNode.find({ roadmap: roadmap._id })
       .populate({
@@ -207,7 +208,15 @@ export const updateRoadmapWithNodes = async (
     if (!roadmap) return next(new Errorhandler(404, "Roadmap not found"));
 
     // Basic update
-    Object.assign(roadmap, roadmapUpdates);
+    // Object.assign(roadmap, roadmapUpdates);
+    
+   if(roadmapUpdates && typeof roadmapUpdates === 'object'){
+      for(const [key, value] of Object.entries(roadmapUpdates)){
+          roadmap.set(key, value); 
+      }
+   }
+
+
     roadmap.version = (roadmap.version ?? 0) + 1;
     roadmap.lastUpdated = new Date();
     roadmap.updatedBy = (req.user as { _id: mongoose.Types.ObjectId })?._id;
@@ -219,16 +228,28 @@ export const updateRoadmapWithNodes = async (
         updateOne: {
           filter: { _id: node._id, roadmap: roadmapId },
           update: {
-            $set: { ...node, updatedBy: req.user?._id, updatedAt: new Date() },
+            $set: { ...node,
+               updatedBy: req.user?._id,
+                updatedAt: new Date(), 
+              },
           },
         },
       }));
       await RoadmapNode.bulkWrite(bulkOps);
     }
 
+ 
+
+  const updateRoadmap = await Roadmap.findById(roadmapId).populate("contributor", "username"); 
+  const updatedNodes = await RoadmapNode.find({
+     roadmap: roadmapId
+  }); 
+
     res.status(200).json({
       success: true,
       message: "Roadmap and nodes updated successfully",
+      roadmap:updateRoadmap,
+      nodes:updatedNodes, 
     });
   } catch (error) {
     next(error);
@@ -365,6 +386,7 @@ export const updateRoadmap = async (
     if (
       !req.user ||(roadmap.contributor?.toString() !== req.user._id.toString() && req.user.Role !== "admin")
     ) {
+      console.error(error);
       return next(new Errorhandler(403, "Unauthorized to update roadmap"));
     }
 

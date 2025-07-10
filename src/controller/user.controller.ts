@@ -8,8 +8,9 @@ import sendVerificationMail, {
 import UploadOnCloudinary from "../util/cloudinary.util";
 import Errorhandler from "../util/Errorhandler.util";
 import sendtoken from "../util/sendtoken";
-import { reqwithuser } from "../middleware/auth.middleware";
+import { isverified, reqwithuser } from "../middleware/auth.middleware";
 import { Schema, ObjectId } from "mongoose";
+import { error } from "console";
 export const getMyProfile = catchAsync(
   async (req: reqwithuser, res: Response, next: NextFunction) => {
     const userId = req.user?._id;
@@ -18,7 +19,9 @@ export const getMyProfile = catchAsync(
       return next(new Errorhandler(401, "Not authorized"));
     }
 
-    const user = await usermodel.findById(userId).select("-password -verifyCode -verifyCodeExpiry");
+    const user = await usermodel
+      .findById(userId)
+      .select("-password -verifyCode -verifyCodeExpiry");
 
     if (!user) {
       return next(new Errorhandler(404, "User not found"));
@@ -34,7 +37,7 @@ export const getMyProfile = catchAsync(
 export const registerUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { username, email, password } = req.body;
+      const { username, email, password,profileUrl,  verifyCodeExpiry, Role, } = req.body;
       console.log("this is a req.body", req.body);
       const ExistingUser = await usermodel.findOne({
         email,
@@ -51,7 +54,7 @@ export const registerUser = catchAsync(
       let verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
 
       if (ExistingUserUnVerified) {
-        ExistingUserUnVerified.password = await bcrypt.hash(password, 10);
+        ExistingUserUnVerified.password = password;
         ExistingUserUnVerified.verifyCode = verifyCode;
         ExistingUserUnVerified.verifyCodeExpiry = new Date(
           Date.now() + 3600000
@@ -67,6 +70,9 @@ export const registerUser = catchAsync(
         }
       } else {
         const verifyCodeExpiry = new Date(Date.now() + 3600000);
+          
+        
+       
         if (req.file && req.file.path) {
           const cloudinaryUrl = await UploadOnCloudinary(req.file.path);
 
@@ -75,6 +81,9 @@ export const registerUser = catchAsync(
             "this is a cloudinary and secure url",
             profileUrl + "     " + cloudinaryUrl
           );
+         
+           
+
           const newUser = new usermodel({
             username,
             password,
@@ -82,7 +91,8 @@ export const registerUser = catchAsync(
             profileUrl: profileUrl,
             verifyCode: verifyCode,
             verifyCodeExpiry: verifyCodeExpiry,
-            isVerified: false,
+            isVerified: false, 
+            Role,
           });
 
           await newUser.save();
@@ -94,6 +104,7 @@ export const registerUser = catchAsync(
             verifyCode: verifyCode,
             verifyCodeExpiry: verifyCodeExpiry,
             isVerified: false,
+            Role,
           });
 
           await newUser.save();
@@ -112,6 +123,7 @@ export const registerUser = catchAsync(
         success: true,
         message:
           "User registered successfully ,please verify your account first",
+        code: verifyCode,
       });
     } catch (error: any) {
       return next(new Errorhandler(500, "Internal server Error "));
@@ -163,13 +175,25 @@ export const Login = catchAsync(async (req, res, next) => {
     const { email, password } = req.body;
     console.log("this is a req.body:", req.body);
     if (!email || !password) {
+      console.log("missing credentials"); 
       return next(new Errorhandler(404, "Please Enter credentials"));
     }
     const user = await usermodel.findOne({ email });
     if (!user) {
+      console.log("user not found with email: ", email); 
       return next(new Errorhandler(404, "Invalid credentials"));
     }
+
+     console.log("found user :", {
+        email: user.email, 
+        isVerified: user.isVerified, 
+        hashedPassword: user.password, 
+     }); 
+
+
+
     if (!user.isVerified) {
+      console.log("user not verified"); 
       return next(
         new Errorhandler(
           400,
@@ -179,12 +203,17 @@ export const Login = catchAsync(async (req, res, next) => {
     }
     const isCorrectPassword = await user.comparePassword(password);
     if (!isCorrectPassword) {
+      console.log("password missmatch"); 
       return next(new Errorhandler(404, "Invalid credentials"));
+      
     }
     const token = user.generateToken();
+    console.log("login successful, generated token: ",token); 
+
+
     sendtoken(res, token, 200, user);
   } catch (error: any) {
-    console.log("Error Login", error);
+    console.error("Error Login", error);
     return next(new Errorhandler(500, "Internal server Error "));
   }
 });
@@ -256,5 +285,3 @@ export const Resetpassword = catchAsync(
     }
   }
 );
-
-

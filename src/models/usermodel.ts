@@ -98,9 +98,9 @@ userSchema.methods.generateToken = function (): string {
   );
 };
 userSchema.methods.comparePassword = async function (
-  oldpassword: string
+  enteredPassword: string
 ): Promise<boolean> {
-  return await bcrypt.compare(oldpassword, this.password);
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 userSchema.methods.ResetToken = function (): void {
   this.ResetPasswordToken = crypto.randomBytes(20).toString("hex");
