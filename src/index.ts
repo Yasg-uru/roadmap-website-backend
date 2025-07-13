@@ -9,7 +9,8 @@ import userRouter from "./route/user.route";
 import RoadmapRouter from "./route/roadmap.route";
 import { ErrorhandlerMiddleware } from "./util/Errorhandler.util";
 import userProgressRoutes from './route/userProgress.routes'; 
-import analyticsRoutes from './route/analyticsRoutes'; 
+import analyticsRoutes from './route/analyticsRoutes';
+import bookmarkRoutes  from "./route/bookmarkRoutes"; 
 
 
 
@@ -64,6 +65,7 @@ app.use("/user", userRouter);
 app.use("/roadmap", RoadmapRouter);
 app.use("/api/progress", userProgressRoutes); 
 app.use("/api/analytics", analyticsRoutes); 
+app.use("/api/bookmarks", bookmarkRoutes); 
 
 app.use(ErrorhandlerMiddleware);
 

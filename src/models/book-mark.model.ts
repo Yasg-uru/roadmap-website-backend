@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import Roadmap from './roadmap.model'; '../models/Roadmap'; 
 
 export interface IBookmark extends Document {
   user: mongoose.Types.ObjectId;
