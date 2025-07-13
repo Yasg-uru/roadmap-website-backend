@@ -9,6 +9,11 @@ import userRouter from "./route/user.route";
 import RoadmapRouter from "./route/roadmap.route";
 import { ErrorhandlerMiddleware } from "./util/Errorhandler.util";
 import userProgressRoutes from './route/userProgress.routes'; 
+import analyticsRoutes from './route/analyticsRoutes'; 
+
+
+
+
 
 dotenv.config();
 ConnectDatabase();
@@ -58,7 +63,7 @@ app.use(express.json());
 app.use("/user", userRouter);
 app.use("/roadmap", RoadmapRouter);
 app.use("/api/progress", userProgressRoutes); 
-
+app.use("/api/analytics", analyticsRoutes); 
 
 app.use(ErrorhandlerMiddleware);
 
