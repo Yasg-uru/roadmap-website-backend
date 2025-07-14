@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document, Model, Query } from 'mongoose';
 
 export type SubmissionType = 'roadmap' | 'resource' | 'node' | 'update';
 export type SubmissionStatus = 'pending' | 'approved' | 'rejected' | 'merged';
@@ -79,7 +79,21 @@ submissionSchema.index({ node: 1 });
 submissionSchema.index({ resource: 1 });
 
 // Query middleware
-submissionSchema.pre(/^find/, function (next) {
+// submissionSchema.pre(/^find/, function (next) {
+//   this.populate ({
+//     path: 'user',
+//     select: 'username avatar',
+//   }).populate({
+//     path: 'reviewedBy',
+//     select: 'username avatar',
+//   });
+//   next();
+// });
+
+submissionSchema.pre(/^find/, function (
+  this: Query<any, IContentSubmission>,
+  next
+) {
   this.populate({
     path: 'user',
     select: 'username avatar',
@@ -87,8 +101,13 @@ submissionSchema.pre(/^find/, function (next) {
     path: 'reviewedBy',
     select: 'username avatar',
   });
+
   next();
 });
+
+
+
+
 
 const ContentSubmission: Model<IContentSubmission> = mongoose.model<IContentSubmission>(
   'ContentSubmission',

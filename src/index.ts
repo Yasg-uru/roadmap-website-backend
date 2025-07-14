@@ -15,7 +15,7 @@ import notificationRoutes from "./route/notificationRoute";
 import resourceRoutes from './route/resourceRoutes';
 import reviewRoutes from './route/reviewRoutes'; 
 import roadmapnodeRoutes from "./route/roadmapnodeRoute";
-
+import contentSubmissionRoutes from "./route/contentSubmissionRoutes";
 
 
 
@@ -75,7 +75,8 @@ app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/notification", notificationRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/reviews", reviewRoutes);
-app.use("/api/roadmapnode", roadmapnodeRoutes);     
+app.use("/api/roadmapnode", roadmapnodeRoutes); 
+app.use("/api/submissions", contentSubmissionRoutes);     
 
 app.use(ErrorhandlerMiddleware);
 
